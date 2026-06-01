@@ -83,3 +83,12 @@ npx vercel --prod
 
 배포 환경에서는 로컬의 `.gitignore`된 `config.js`가 포함되지 않습니다. Vercel 환경 변수로 생성된 `config.js`는
 브라우저에 전달되는 정적 파일이므로 키가 노출됩니다. 위의 HTTP referrer/API/쿼터 제한을 먼저 적용하세요.
+
+## 배포 시 인증 실패 점검(추가)
+
+Google Maps 인증 실패 메시지는 로컬뿐 아니라 배포 환경에서도 동일하게 표시됩니다.
+아래 조건이 누락되면 배포 도메인에서 `RefererNotAllowedMapError` 또는 `REQUEST_DENIED`가 발생할 수 있습니다.
+
+- HTTP referrer 허용 예시: `https://<배포도메인>/*`, `https://*.vercel.app/*`, `http://localhost:8080/*`
+- API 제한: Maps JavaScript API + Places API 허용
+- Billing(결제 계정) 활성화 여부 확인

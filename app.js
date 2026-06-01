@@ -102,6 +102,7 @@ const state = {
   results: [],
   activeResultIndex: null,
   discoveryTimer: null,
+  overlayCollapsed: false,
 };
 
 const els = {
@@ -120,10 +121,15 @@ const els = {
   rerunSearch: document.querySelector("#rerun-search"),
   recenterButton: document.querySelector("#recenter-button"),
   mapOverlay: document.querySelector("#map-overlay"),
+  overlayPanel: document.querySelector("#overlay-panel"),
+  overlayToggle: document.querySelector("#overlay-toggle"),
 };
 
 renderChips();
 bindEvents();
+if (els.overlayToggle && els.overlayPanel) {
+  setOverlayCollapsed(false);
+}
 updateMapOverlay("반경 500m 검색 대기 중");
 bootstrapApiKey();
 
@@ -158,9 +164,13 @@ function bindEvents() {
     if (state.map && state.selectedPlace?.location) {
       state.map.panTo(state.selectedPlace.location);
       state.map.setZoom(16);
-      document.querySelector(".map-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   });
+  if (els.overlayToggle && els.overlayPanel) {
+    els.overlayToggle.addEventListener("click", () => {
+      setOverlayCollapsed(!state.overlayCollapsed);
+    });
+  }
 }
 
 function bootstrapApiKey() {
@@ -671,6 +681,13 @@ function setStatus(message, isError = false) {
 
 function updateMapOverlay(message) {
   els.mapOverlay.textContent = message;
+}
+
+function setOverlayCollapsed(isCollapsed) {
+  state.overlayCollapsed = isCollapsed;
+  els.overlayPanel.classList.toggle("is-collapsed", isCollapsed);
+  els.overlayToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  els.overlayToggle.textContent = isCollapsed ? "패널 열기 ▲" : "패널 닫기 ▼";
 }
 
 function getPlacesErrorMessage(status) {
