@@ -20,7 +20,7 @@
     <script src="./app.js" defer></script>
   </head>
   <body>
-    <a class="skip-link" href="#search-input">검색으로 바로가기</a>
+    <a class="skip-link" href="#flow-place-input">질문 모달로 바로가기</a>
 
     <main class="maflix-app map-fullscreen">
       <section class="map-canvas" aria-label="검색 위치 지도">
@@ -33,89 +33,79 @@
       </section>
 
       <div class="overlay-layer">
-        <button
-          id="overlay-toggle"
-          class="overlay-toggle"
-          type="button"
-          aria-controls="overlay-panel"
-          aria-expanded="true"
-        >
-          패널 닫기
-        </button>
-
-        <section id="overlay-panel" class="overlay-panel" aria-label="Maflix 검색 및 추천 패널">
-          <header class="top-bar">
-            <a class="brand" href="#hero-title" aria-label="Maflix 홈">
+        <section id="flow-modal" class="flow-modal" role="dialog" aria-modal="true" aria-labelledby="flow-title">
+          <div class="flow-modal__header">
+            <a class="brand" href="#flow-place-input" aria-label="Maflix 홈">
               <strong>Maflix</strong>
-              <span>500m Taste Streaming</span>
+              <span>회식 맛집 플로우</span>
             </a>
+            <p id="flow-step-indicator" class="step-indicator">Step 1 / 4</p>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <span id="flow-progress-bar" class="progress-fill" style="width: 25%"></span>
+          </div>
 
-            <section class="search-row" aria-labelledby="search-title">
-              <h2 id="search-title" class="visually-hidden">위치 검색</h2>
-              <input
-                id="search-input"
-                type="search"
-                placeholder="주소, 장소, 역 이름을 검색하세요"
-                autocomplete="off"
-                disabled
-              />
-              <button class="primary-button" type="button" id="search-button" disabled>
-                주변 검색
-              </button>
-            </section>
-          </header>
-
-          <section class="hero hero--compact" aria-labelledby="hero-title">
-            <div class="hero-copy">
-              <p class="eyebrow">Maflix 500m 추천</p>
-              <h1 id="hero-title">가까운맛집<br />빠르게 찾기</h1>
-              <p id="location-summary" class="hero-summary">
-                위치를 고르고 주변 검색을 누르면 반경 500m 후보를 카드로 정리해 보여줍니다.
-              </p>
-              <div class="hero-actions">
-                <button class="play-button" type="button" id="random-pick" disabled>
-                  오늘의 한 끼 추천
-                </button>
-                <button class="secondary-button" type="button" id="recenter-button" disabled>
-                  지도로 이동
-                </button>
-                <button class="secondary-button" type="button" id="rerun-search" disabled>
-                  다시 검색
-                </button>
-              </div>
-              <div id="daily-discovery" class="hero-pick" aria-live="polite">
-                <strong>추천 대기 중</strong>
-                <span>위치를 선택하고 주변 검색을 눌러보세요.</span>
-              </div>
+          <section id="flow-step-1" class="flow-step" data-step="1">
+            <h1 id="flow-title">어디서 회식하나요? 주요 건물이나 역을 입력하고 선택하세요</h1>
+            <p class="flow-help">Places 자동완성에서 반드시 하나를 선택해 주세요.</p>
+            <input
+              id="flow-place-input"
+              type="search"
+              placeholder="예: 강남역, 여의도역, 판교역"
+              autocomplete="off"
+              disabled
+            />
+            <p id="step1-selection" class="flow-hint">장소를 선택하면 Step 2로 진행할 수 있습니다.</p>
+            <div class="flow-actions">
+              <button id="step1-next" class="primary-button" type="button" disabled>다음</button>
             </div>
           </section>
 
-          <section class="control-deck" aria-label="검색 상태 및 필터">
-            <section class="config-notice" aria-labelledby="api-title">
-              <h2 id="api-title" class="visually-hidden">Google Maps API Key 설정</h2>
-              <span id="api-key-help">API Key는 config.js 또는 Vercel env로 설정합니다.</span>
-            </section>
-
-            <div id="status-message" class="status-message" role="status" aria-live="polite">
-              config.js 또는 Vercel env에 API 키를 설정하세요.
+          <section id="flow-step-2" class="flow-step is-hidden" data-step="2" aria-hidden="true">
+            <h2>세부 장소를 마우스로 찍으세요</h2>
+            <p class="flow-help">지도에서 정확한 모임 지점을 클릭하면 500m 반경이 설정됩니다.</p>
+            <p id="step2-selection" class="flow-hint">아직 선택되지 않았습니다.</p>
+            <div class="flow-actions">
+              <button id="step2-back" class="secondary-button" type="button">이전</button>
+              <button id="step2-next" class="primary-button" type="button" disabled>다음</button>
             </div>
+          </section>
 
-            <div class="filter-row" aria-label="음식점 필터">
-              <div>
-                <p class="row-kicker">카테고리</p>
-                <div class="chip-list" id="category-chips" role="list"></div>
-              </div>
-              <div>
-                <p class="row-kicker">취향</p>
-                <div class="chip-list mood-list" id="mood-chips" role="list"></div>
-              </div>
+          <section id="flow-step-3" class="flow-step is-hidden" data-step="3" aria-hidden="true">
+            <h2>육/해/공 중 어떤 게 끌리시나요?</h2>
+            <p class="flow-help">원하는 항목을 누르거나 랜덤으로 확정하세요.</p>
+            <div id="protein-options" class="choice-grid" role="group" aria-label="단백질 취향 선택"></div>
+            <div class="flow-actions">
+              <button id="step3-back" class="secondary-button" type="button">이전</button>
+              <button id="protein-random" class="secondary-button" type="button">랜덤으로 고르기</button>
             </div>
+          </section>
+
+          <section id="flow-step-4" class="flow-step is-hidden" data-step="4" aria-hidden="true">
+            <h2>한식/양식/일식/중식/기타 중 어떤 게 끌리시나요?</h2>
+            <p class="flow-help">선택 즉시 검색이 실행됩니다. 랜덤도 가능합니다.</p>
+            <div id="cuisine-options" class="choice-grid" role="group" aria-label="요리 계열 선택"></div>
+            <div class="flow-actions">
+              <button id="step4-back" class="secondary-button" type="button">이전</button>
+              <button id="cuisine-random" class="secondary-button" type="button">랜덤으로 고르기</button>
+            </div>
+          </section>
+        </section>
+
+        <div id="status-message" class="status-message status-floating" role="status" aria-live="polite">
+          config.js 또는 Vercel env에 API 키를 설정하세요.
+        </div>
+
+        <section id="overlay-panel" class="overlay-panel" aria-label="검색 결과 바텀시트">
+          <section class="config-notice" aria-labelledby="api-title">
+            <h2 id="api-title" class="visually-hidden">Google Maps API Key 설정</h2>
+            <span id="api-key-help">API Key는 config.js 또는 Vercel env로 설정합니다.</span>
           </section>
 
           <section class="results-section" aria-labelledby="results-title">
             <div class="results-heading">
               <div>
-                <p class="row-kicker">Now Streaming</p>
+                <p class="row-kicker">Flow Result</p>
                 <h2 id="results-title">주변 맛집</h2>
               </div>
               <div class="results-heading__meta">
@@ -123,6 +113,24 @@
                 <p id="result-count" aria-live="polite">검색 전</p>
               </div>
             </div>
+
+            <div class="hero-actions compact-actions">
+              <button class="play-button" type="button" id="final-random-pick" disabled>
+                룰렛/랜덤으로 최종 선택
+              </button>
+              <button class="secondary-button" type="button" id="recenter-button" disabled>
+                선택 위치로 이동
+              </button>
+              <button class="secondary-button" type="button" id="rerun-search" disabled>
+                다시 검색
+              </button>
+            </div>
+
+            <div id="daily-discovery" class="hero-pick" aria-live="polite">
+              <strong>최종 선택 대기 중</strong>
+              <span>질문 4단계를 완료하면 결과 중 하나를 랜덤으로 확정할 수 있습니다.</span>
+            </div>
+
             <div id="results" class="results-rows"></div>
           </section>
         </section>
