@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="선택한 위치에서 500m 안의 맛집 후보를 OTT 스타일로 추천하는 Maflix 정적 웹앱"
+    />
+    <title>Maflix - 오늘 뭐 먹지?</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://maps.googleapis.com" />
+    <link rel="preconnect" href="https://maps.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./config.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#search-input">검색으로 바로가기</a>
+
+    <main class="maflix-app map-fullscreen">
+      <section class="map-canvas" aria-label="검색 위치 지도">
+        <div id="map" class="map" role="application" aria-label="선택 위치와 음식점 후보 지도">
+          <div class="map-placeholder">
+            <strong>Google Maps API Key 설정이 필요합니다</strong>
+            <span>config.js 또는 Vercel 환경 변수에 API 키를 설정하세요.</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="overlay-layer">
+        <button
+          id="overlay-toggle"
+          class="overlay-toggle"
+          type="button"
+          aria-controls="overlay-panel"
+          aria-expanded="true"
+        >
+          패널 닫기
+        </button>
+
+        <section id="overlay-panel" class="overlay-panel" aria-label="Maflix 검색 및 추천 패널">
+          <header class="top-bar">
+            <a class="brand" href="#hero-title" aria-label="Maflix 홈">
+              <strong>Maflix</strong>
+              <span>500m Taste Streaming</span>
+            </a>
+
+            <section class="search-row" aria-labelledby="search-title">
+              <h2 id="search-title" class="visually-hidden">위치 검색</h2>
+              <input
+                id="search-input"
+                type="search"
+                placeholder="주소, 장소, 역 이름을 검색하세요"
+                autocomplete="off"
+                disabled
+              />
+              <button class="primary-button" type="button" id="search-button" disabled>
+                주변 검색
+              </button>
+            </section>
+          </header>
+
+          <section class="hero hero--compact" aria-labelledby="hero-title">
+            <div class="hero-copy">
+              <p class="eyebrow">Maflix 500m 추천</p>
+              <h1 id="hero-title">가까운맛집<br />빠르게 찾기</h1>
+              <p id="location-summary" class="hero-summary">
+                위치를 고르고 주변 검색을 누르면 반경 500m 후보를 카드로 정리해 보여줍니다.
+              </p>
+              <div class="hero-actions">
+                <button class="play-button" type="button" id="random-pick" disabled>
+                  오늘의 한 끼 추천
+                </button>
+                <button class="secondary-button" type="button" id="recenter-button" disabled>
+                  지도로 이동
+                </button>
+                <button class="secondary-button" type="button" id="rerun-search" disabled>
+                  다시 검색
+                </button>
+              </div>
+              <div id="daily-discovery" class="hero-pick" aria-live="polite">
+                <strong>추천 대기 중</strong>
+                <span>위치를 선택하고 주변 검색을 눌러보세요.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="control-deck" aria-label="검색 상태 및 필터">
+            <section class="config-notice" aria-labelledby="api-title">
+              <h2 id="api-title" class="visually-hidden">Google Maps API Key 설정</h2>
+              <span id="api-key-help">API Key는 config.js 또는 Vercel env로 설정합니다.</span>
+            </section>
+
+            <div id="status-message" class="status-message" role="status" aria-live="polite">
+              config.js 또는 Vercel env에 API 키를 설정하세요.
+            </div>
+
+            <div class="filter-row" aria-label="음식점 필터">
+              <div>
+                <p class="row-kicker">카테고리</p>
+                <div class="chip-list" id="category-chips" role="list"></div>
+              </div>
+              <div>
+                <p class="row-kicker">취향</p>
+                <div class="chip-list mood-list" id="mood-chips" role="list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="results-section" aria-labelledby="results-title">
+            <div class="results-heading">
+              <div>
+                <p class="row-kicker">Now Streaming</p>
+                <h2 id="results-title">주변 맛집</h2>
+              </div>
+              <div class="results-heading__meta">
+                <span id="map-overlay" class="map-overlay" aria-live="polite">반경 500m 검색 대기 중</span>
+                <p id="result-count" aria-live="polite">검색 전</p>
+              </div>
+            </div>
+            <div id="results" class="results-rows"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
