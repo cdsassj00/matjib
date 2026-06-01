@@ -133,7 +133,9 @@ function bindEvents() {
     state.map.setZoom(16);
   });
 
-  els.rerunSearch?.addEventListener("click", runSearch);
+  els.rerunSearch?.addEventListener("click", () => {
+    resetFlow({ statusMessage: "처음부터 조건을 다시 선택해 주세요." });
+  });
   els.finalRandomPick?.addEventListener("click", pickFinalRandom);
 }
 
@@ -227,6 +229,46 @@ function setApiNoticeVisible(visible) {
 function setResultsPanelVisible(visible) {
   if (!els.overlayPanel) return;
   els.overlayPanel.classList.toggle("is-hidden", !visible);
+}
+
+function resetFlow({ statusMessage = "Step 1: 장소를 입력하고 자동완성에서 선택해 주세요." } = {}) {
+  state.currentStep = 1;
+  state.answers = {
+    majorPlace: null,
+    detailLocation: null,
+    protein: null,
+    cuisine: null,
+  };
+
+  [state.originMarker, state.detailMarker, state.circle].forEach((item) => item?.setMap(null));
+  state.originMarker = null;
+  state.detailMarker = null;
+  state.circle = null;
+  clearResults("검색 전");
+  setResultsPanelVisible(false);
+
+  els.flowModal?.classList.remove("is-complete");
+  els.flowModal?.setAttribute("aria-hidden", "false");
+  if (els.placeInput) {
+    els.placeInput.value = "";
+    els.placeInput.focus();
+  }
+  if (els.step1Selection) els.step1Selection.textContent = "장소를 선택하면 Step 2로 진행할 수 있습니다.";
+  if (els.step2Selection) els.step2Selection.textContent = "아직 선택되지 않았습니다.";
+  if (els.step1Next) els.step1Next.disabled = true;
+  if (els.step2Next) els.step2Next.disabled = true;
+  if (els.recenterButton) els.recenterButton.disabled = true;
+  if (els.finalRandomPick) els.finalRandomPick.disabled = true;
+  if (els.rerunSearch) els.rerunSearch.disabled = true;
+  if (els.dailyDiscovery) {
+    els.dailyDiscovery.innerHTML =
+      "<strong>최종 선택 대기 중</strong><span>질문 4단계를 완료하면 결과 중 하나를 랜덤으로 확정할 수 있습니다.</span>";
+  }
+  updatePressedState("[data-protein]", "", "protein");
+  updatePressedState("[data-cuisine]", "", "cuisine");
+  updateMapOverlay("반경 500m 검색 대기 중");
+  setStep(1);
+  setStatus(statusMessage);
 }
 
 function initializeMap() {
@@ -406,7 +448,6 @@ async function runSearch() {
     return;
   }
 
-  const keyword = buildSearchKeyword();
   setResultsPanelVisible(true);
   setLoading(true);
   setStatus("선택한 조건으로 500m 내 식당을 검색 중입니다...");
@@ -418,7 +459,6 @@ async function runSearch() {
       location: state.answers.detailLocation,
       radius: SEARCH_RADIUS_METERS,
       type: "restaurant",
-      keyword,
     });
 
     const unique = dedupePlaces(nearby)
@@ -435,12 +475,12 @@ async function runSearch() {
       state.results = [];
       renderResults();
       updateMapOverlay("후보 0곳");
-      setStatus("조건에 맞는 식당을 찾지 못했습니다. Step 3/4 조합을 바꿔 다시 시도해 보세요.");
+      resetFlow({ statusMessage: "검색 결과가 없어 처음부터 다시 선택해 주세요." });
       return;
     }
 
     const detailed = await hydratePlaceDetails(unique.slice(0, 12));
-    state.results = [...detailed, ...unique.slice(12)];
+    state.results = [...detailed, ...unique.slice(12)].sort((a, b) => scorePlace(b) - scorePlace(a));
     renderResults();
     renderResultMarkers();
     pickFinalRandom();
@@ -448,18 +488,18 @@ async function runSearch() {
     const proteinLabel = state.answers.protein.label;
     const cuisineLabel = state.answers.cuisine.label;
     updateMapOverlay(`반경 500m · ${proteinLabel}/${cuisineLabel} · ${state.results.length}곳`);
-    setStatus(`${state.results.length}개의 결과를 표시했습니다.`);
+    setStatus("조건에 가까운 후보를 우선으로, 주변 인기 식당까지 넓혀 표시했습니다.");
   } catch (error) {
-    setStatus(getPlacesErrorMessage(error), true);
+    const message = getPlacesErrorMessage(error);
+    if (isApiPermissionError(error)) {
+      setStatus(message, true);
+    } else {
+      resetFlow({ statusMessage: message });
+      setStatus(`${message} 처음부터 다시 선택해 주세요.`, true);
+    }
   } finally {
     setLoading(false);
   }
-}
-
-function buildSearchKeyword() {
-  const protein = state.answers.protein?.search || "";
-  const cuisine = state.answers.cuisine?.search || "";
-  return `${cuisine} ${protein} 맛집`.trim();
 }
 
 function nearbySearch(request) {
@@ -501,13 +541,13 @@ function hydratePlaceDetails(places) {
   );
 }
 
-function clearResults() {
+function clearResults(resultCountText = "검색 중...") {
   state.resultMarkers.forEach((marker) => marker.setMap(null));
   state.resultMarkers = [];
   state.results = [];
   state.selectedResultIndex = null;
   els.results.innerHTML = "";
-  els.resultCount.textContent = "검색 중...";
+  els.resultCount.textContent = resultCountText;
 }
 
 function renderResults() {
@@ -541,6 +581,7 @@ function renderPlaceCard(place, index) {
   const rating = place.rating ? `★ ${place.rating.toFixed(1)}` : "평점 미제공";
   const reviews = place.user_ratings_total ? `리뷰 ${place.user_ratings_total.toLocaleString()}개` : "리뷰 수 없음";
   const openNow = formatOpenNow(place.opening_hours);
+  const reason = buildSelectionReason(place);
   const mapsUrl = sanitizeExternalUrl(
     place.url ||
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${
@@ -568,6 +609,7 @@ function renderPlaceCard(place, index) {
           <span class="meta">${openNow}</span>
         </div>
         <p class="meta address">${escapeHtml(address)}</p>
+        <p class="meta">${escapeHtml(reason)}</p>
         <div class="card-actions">
           ${
             mapsUrl
@@ -611,19 +653,31 @@ function pickFinalRandom() {
     els.dailyDiscovery.innerHTML = "<strong>최종 선택 대기 중</strong><span>검색 결과가 있으면 랜덤 선택이 가능합니다.</span>";
     return;
   }
-  const index = Math.floor(Math.random() * state.results.length);
+  const index = pickWeightedResultIndex();
   const place = state.results[index];
   highlightResult(index, true);
   els.dailyDiscovery.innerHTML = buildFinalPickHtml(place, true);
+}
+
+function pickWeightedResultIndex() {
+  const weights = state.results.map((place) => Math.max(1, scorePlace(place)));
+  const totalWeight = weights.reduce((total, weight) => total + weight, 0);
+  let cursor = Math.random() * totalWeight;
+  for (let index = 0; index < weights.length; index += 1) {
+    cursor -= weights[index];
+    if (cursor <= 0) return index;
+  }
+  return state.results.length - 1;
 }
 
 function buildFinalPickHtml(place, isRandom) {
   const prefix = isRandom ? "랜덤 최종 선택" : "선택된 식당";
   const protein = state.answers.protein?.label || "-";
   const cuisine = state.answers.cuisine?.label || "-";
+  const reason = buildSelectionReason(place);
   return `
     <strong>${escapeHtml(prefix)}: ${escapeHtml(place.name || "오늘의 한 끼")}</strong>
-    <span>${Math.round(place.distance)}m · ${protein}/${cuisine}</span>
+    <span>${Math.round(place.distance)}m · ${protein}/${cuisine} · ${escapeHtml(reason)}</span>
   `;
 }
 
@@ -652,7 +706,7 @@ function highlightResult(index, panMap) {
 
 function setLoading(isLoading) {
   els.finalRandomPick.disabled = isLoading || state.results.length === 0;
-  els.rerunSearch.disabled = isLoading;
+  els.rerunSearch.disabled = isLoading || state.results.length === 0;
 }
 
 function setStatus(message, isError = false) {
@@ -680,11 +734,39 @@ function getPlacesErrorMessage(status) {
   return map[status] || `장소 검색 중 오류가 발생했습니다. 상태: ${status}`;
 }
 
+function isApiPermissionError(status) {
+  return status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED;
+}
+
 function scorePlace(place) {
+  const matchScore = getSelectionMatchScore(place);
   const ratingScore = (place.rating || 0) * 20;
   const reviewScore = Math.min(place.user_ratings_total || 0, 500) / 10;
   const distanceScore = Math.max(0, SEARCH_RADIUS_METERS - place.distance) / 20;
-  return ratingScore + reviewScore + distanceScore;
+  return matchScore + ratingScore + reviewScore + distanceScore;
+}
+
+function getSelectionMatchScore(place) {
+  const text = getPlaceMatchText(place);
+  return [state.answers.protein, state.answers.cuisine].reduce((score, option) => {
+    if (!option) return score;
+    const keywords = option.search.toLowerCase().split(/\s+/).filter((keyword) => keyword.length > 1);
+    return score + (keywords.some((keyword) => text.includes(keyword)) ? 45 : 0);
+  }, 0);
+}
+
+function buildSelectionReason(place) {
+  const reasons = [];
+  if (getSelectionMatchScore(place) > 0) reasons.push("조건 근접");
+  if ((place.rating || 0) >= 4 || (place.user_ratings_total || 0) >= 80) reasons.push("주변 인기");
+  if (place.distance <= 250) reasons.push("거리 가까움");
+  return reasons.slice(0, 2).join(" · ") || "주변 후보";
+}
+
+function getPlaceMatchText(place) {
+  return `${place.name || ""} ${(place.types || []).join(" ")} ${place.vicinity || ""} ${
+    place.formatted_address || ""
+  }`.toLowerCase();
 }
 
 function dedupePlaces(places) {
