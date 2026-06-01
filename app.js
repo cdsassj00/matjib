@@ -72,6 +72,9 @@ const els = {
   cuisineOptions: document.querySelector("#cuisine-options"),
   proteinRandom: document.querySelector("#protein-random"),
   cuisineRandom: document.querySelector("#cuisine-random"),
+  overlayPanel: document.querySelector("#overlay-panel"),
+  configNotice: document.querySelector(".config-notice"),
+  apiKeyHelp: document.querySelector("#api-key-help"),
 };
 
 renderChoiceButtons();
@@ -178,11 +181,13 @@ function bootstrapApiKey() {
   const key = configuredKey.trim();
 
   if (!key || key === "YOUR_GOOGLE_MAPS_API_KEY") {
+    setApiNoticeVisible(true);
     setStatus("config.js 또는 Vercel env에 API 키를 설정하세요.", true);
     updateMapOverlay("API 키 설정 필요");
     return;
   }
 
+  setApiNoticeVisible(false);
   loadGoogleMaps(key);
 }
 
@@ -197,6 +202,7 @@ function loadGoogleMaps(key) {
 
   window.__initFlowMap = initializeMap;
   window.gm_authFailure = () => {
+    setApiNoticeVisible(true);
     setStatus("Google Maps 인증에 실패했습니다. API 키/결제/API 제한을 확인해 주세요.", true);
   };
 
@@ -207,9 +213,20 @@ function loadGoogleMaps(key) {
   script.async = true;
   script.defer = true;
   script.onerror = () => {
+    setApiNoticeVisible(true);
     setStatus("Maps JavaScript API 로드에 실패했습니다. 키/도메인 제한/네트워크를 확인해 주세요.", true);
   };
   document.head.appendChild(script);
+}
+
+function setApiNoticeVisible(visible) {
+  if (!els.configNotice) return;
+  els.configNotice.classList.toggle("is-hidden", !visible);
+}
+
+function setResultsPanelVisible(visible) {
+  if (!els.overlayPanel) return;
+  els.overlayPanel.classList.toggle("is-hidden", !visible);
 }
 
 function initializeMap() {
@@ -370,6 +387,7 @@ function completeFlowAndSearch() {
     els.flowModal.classList.add("is-complete");
     els.flowModal.setAttribute("aria-hidden", "true");
   }
+  setResultsPanelVisible(true);
   runSearch();
 }
 
@@ -389,6 +407,7 @@ async function runSearch() {
   }
 
   const keyword = buildSearchKeyword();
+  setResultsPanelVisible(true);
   setLoading(true);
   setStatus("선택한 조건으로 500m 내 식당을 검색 중입니다...");
   updateMapOverlay("반경 500m 검색 중");

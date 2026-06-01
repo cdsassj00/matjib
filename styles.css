@@ -349,6 +349,15 @@ input:focus {
   width: auto;
   max-width: min(860px, calc(100vw - 24px));
   margin: 0 auto;
+  pointer-events: none;
+}
+
+.flow-modal:not(.is-complete) ~ .status-floating {
+  display: none;
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .overlay-panel {
